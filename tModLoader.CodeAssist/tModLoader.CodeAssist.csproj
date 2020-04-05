@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.3</TargetFramework>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>tModLoader.CodeAssist</PackageId>
+    <PackageVersion>0.1</PackageVersion>
+    <Authors>JavidPack</Authors>
+    <!--<PackageLicenseUrl>http://LICENSE_URL_HERE_OR_DELETE_THIS_LINE</PackageLicenseUrl>-->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/tModLoader/tModLoader.CodeAssist</PackageProjectUrl>
+    <PackageIconUrl>https://raw.githubusercontent.com/tModLoader/tModLoader.CodeAssist/master/NugetIcon.png</PackageIconUrl>
+    <PackageIcon>NugetIcon.png</PackageIcon>
+    <RepositoryUrl>https://github.com/tModLoader/tModLoader.CodeAssist</RepositoryUrl>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Description>tModLoader.CodeAssist</Description>
+    <PackageReleaseNotes>Initial test release. Supports magic number fixing.</PackageReleaseNotes>
+    <Copyright>Copyright</Copyright>
+    <PackageTags>tModLoader.CodeAssist, analyzers, tModLoader, Terraria</PackageTags>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="2.6.2" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.10" PrivateAssets="all" />
+    <PackageReference Update="NETStandard.Library" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Resources.Designer.cs" DesignTime="True" AutoGen="True" DependentUpon="Resources.resx" />
+    <EmbeddedResource Update="Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="" />
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\NugetIcon.png" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
+</Project>
