@@ -84,7 +84,10 @@ namespace tModLoader.CodeAssist
 
             if (compilationUnitSyntax.Usings.All(u => u.Name.GetText().ToString() != "Terraria.ID"))
             {
-                newRoot = newRoot.InsertNodesAfter(compilationUnitSyntax.Usings.Last(), new[] { SyntaxFactory.UsingDirective(systemThreadingUsingName) });
+                if(compilationUnitSyntax.Usings.Any())
+                    newRoot = newRoot.InsertNodesAfter(compilationUnitSyntax.Usings.Last(), new[] { SyntaxFactory.UsingDirective(systemThreadingUsingName) });
+                else
+                    newRoot = compilationUnitSyntax.AddUsings(new[] { SyntaxFactory.UsingDirective(systemThreadingUsingName) });
             }
             return Task.FromResult(document.WithSyntaxRoot(newRoot));
         }

@@ -32,13 +32,17 @@ namespace tModLoader.CodeAssist
             // TODO: Consider registering other actions that act on syntax instead of or in addition to symbols
             // See https://github.com/dotnet/roslyn/blob/master/docs/analyzers/Analyzer%20Actions%20Semantics.md for more information
 
+            IdDictionary soundIDIDDictionary = IdDictionary.Create(typeof(SoundID), typeof(int));
+
             FieldToIDTypeBindings = new List<FieldToIDTypeBinding>();
             FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Item", "createTile", "TileID", TileID.Search));
             FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Item", "type", "ItemID", ItemID.Search));
             FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Item", "shoot", "ProjectileID", ProjectileID.Search));
             FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Item", "useStyle", "ItemUseStyleID", IdDictionary.Create(typeof(ItemUseStyleID), typeof(int))));
             FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Item", "rare", "ItemRarityID", IdDictionary.Create(typeof(ItemRarityID), typeof(int))));
+            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.NPC", "type", "NPCID", NPCID.Search));
             FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Main", "netMode", "NetmodeID", IdDictionary.Create(typeof(NetmodeID), typeof(int))));
+            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.ModLoader.ModTile", "soundType", "SoundID", soundIDIDDictionary));
 
             // Could check parameter name, or check parameter list and index. 
             MethodParameterToIDTypeBindings = new List<MethodParameterToIDTypeBinding>();
@@ -47,8 +51,16 @@ namespace tModLoader.CodeAssist
             MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.ModLoader.ModRecipe.AddIngredient", "Terraria.ModLoader.ModRecipe.AddIngredient(int, int)", new string[] { "Int32", "Int32" }, 0, "ItemID", ItemID.Search));
             MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.ModLoader.ModRecipe.SetResult", "Terraria.ModLoader.ModRecipe.SetResult(int, int)", new string[] { "Int32", "Int32" }, 0, "ItemID", ItemID.Search));
             MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.NetMessage.SendData", "Terraria.NetMessage.SendData(int, int, int, Terraria.Localization.NetworkText, int, float, float, float, int, int, int)", new string[] { "Int32", "Int32", "Int32", "NetworkText", "Int32", "Single", "Single", "Single", "Int32", "Int32", "Int32" }, 0, "MessageID", IdDictionary.Create(typeof(MessageID), typeof(byte))));
-            // TODO: PlaySound/SoundID
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Main.PlaySound", "Terraria.Main.PlaySound(int, Microsoft.Xna.Framework.Vector2, int)", new string[] { "Int32", "Vector2", "Int32" }, 0, "SoundID", soundIDIDDictionary));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Main.PlaySound", "Terraria.Main.PlaySound(int, int, int, int, float, float)", new string[] { "Int32", "Int32", "Int32", "Int32", "Single", "Single" }, 0, "SoundID", soundIDIDDictionary));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectile", "Terraria.Projectile.NewProjectile(Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Vector2, int, int, float, int, float, float)", new string[] { "Vector2", "Vector2", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 2, "ProjectileID", ProjectileID.Search));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectile", "Terraria.Projectile.NewProjectile(float, float, float, float, int, int, float, int, float, float)", new string[] { "Single", "Single", "Single", "Single", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 4, "ProjectileID", ProjectileID.Search));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectileDirect", "Terraria.Projectile.NewProjectileDirect(Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Vector2, int, int, float, int, float, float)", new string[] { "Vector2", "Vector2", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 2, "ProjectileID", ProjectileID.Search));
 
+
+            // Main.rand.Next(x) == 0 => Main.rand.NextBool(x)
+
+            //modTile.drop, modTile.soundType, modTile.dustType
             // using static ModContent
             // Detect bad AddTile AddIngredient
             // Main.player[Main.myPlayer] => Main.LocalPlayer
@@ -66,6 +78,8 @@ namespace tModLoader.CodeAssist
                                                                                     SyntaxKind.LessThanOrEqualExpression);
 
             context.RegisterSyntaxNodeAction(AnalyzeMagicNumberInvocationExpressions, SyntaxKind.InvocationExpression);
+
+           // context.RegisterSyntaxNodeAction(AnalyzeIncorrectParameterInvocationExpressions, SyntaxKind.InvocationExpression);
         }
 
         private List<FieldToIDTypeBinding> FieldToIDTypeBindings;
@@ -128,15 +142,24 @@ namespace tModLoader.CodeAssist
             }
         }
 
+        private void AnalyzeIncorrectParameterInvocationExpressions(SyntaxNodeAnalysisContext context)
+        {
+            return;
+
+            // if Method name exists in list
+
+            // if 
+
+            // Detect bad AddTile AddIngredient -> Check for presence of ItemID or call to ItemType
+        }
+
         private void AnalyzeMagicNumberInvocationExpressions(SyntaxNodeAnalysisContext context)
         {
-            // Test Method invocation here
-
             var invocationExpressionSyntax = (InvocationExpressionSyntax)context.Node;
 
             if (!(invocationExpressionSyntax.Expression is MemberAccessExpressionSyntax MemberAccessExpressionSyntax))
                 return;
-
+             
             string methodName = MemberAccessExpressionSyntax.Name.ToString();
             //if (MemberAccessExpressionSyntax?.Name.ToString() != "AddIngredient")
             //    return;
@@ -214,27 +237,32 @@ namespace tModLoader.CodeAssist
             // Only support EqualsExpression: a == b
             var binaryExpressionSyntax = (BinaryExpressionSyntax)context.Node;
 
-            // Reject != <= ...
-            //if (!binaryExpressionSyntax.IsKind(SyntaxKind.EqualsExpression))
-             //   return;
-
             // Check if right side is literal number: a == 123
             if (!(binaryExpressionSyntax.Right is LiteralExpressionSyntax right && right.IsKind(SyntaxKind.NumericLiteralExpression)))
                 return;
 
+            ISymbol symbol;
+            // Check if left is just a field: a = 123
+            if (binaryExpressionSyntax.Left is IdentifierNameSyntax identifierNameSyntax)
+            {
+                symbol = context.SemanticModel.GetSymbolInfo(identifierNameSyntax).Symbol;
+            }
             // Check if left is accessing a member: a.b = 123
-            if (!(binaryExpressionSyntax.Left is MemberAccessExpressionSyntax memberAccessExpressionSyntax))
+            else if (binaryExpressionSyntax.Left is MemberAccessExpressionSyntax memberAccessExpressionSyntax)
+            {
+                symbol = context.SemanticModel.GetSymbolInfo(memberAccessExpressionSyntax).Symbol;
+            }
+            else
                 return;
 
-            // Check if left Type is supported: item.b = 123
-            var memberAccessSymbolInfo = context.SemanticModel.GetSymbolInfo(memberAccessExpressionSyntax).Symbol;
-            if (memberAccessSymbolInfo == null || memberAccessSymbolInfo.ContainingType == null)
+            // Check if left Type exists: item.b = 123
+            if (symbol == null || symbol.ContainingType == null)
                 return;
 
-            if (!(memberAccessSymbolInfo is IFieldSymbol fieldSymbol))
+            if (!(symbol is IFieldSymbol fieldSymbol))
                 return;
 
-            string containingType = memberAccessSymbolInfo.ContainingType.ToString();
+            string containingType = symbol.ContainingType.ToString();
 
             string fieldName = fieldSymbol.Name;
             var FieldToIDTypeBinding = FieldToIDTypeBindings.FirstOrDefault(x => x.fullyQualifiedClassName == containingType && x.field == fieldName);
@@ -269,19 +297,28 @@ namespace tModLoader.CodeAssist
             if (!(assignmentExpressionSyntax.Right is LiteralExpressionSyntax right && right.IsKind(SyntaxKind.NumericLiteralExpression)))
                 return;
 
+            ISymbol symbol;
+            // Check if left is just a field: a = 123
+            if (assignmentExpressionSyntax.Left is IdentifierNameSyntax identifierNameSyntax)
+            {
+                symbol = context.SemanticModel.GetSymbolInfo(identifierNameSyntax).Symbol;
+            }
             // Check if left is accessing a member: a.b = 123
-            if (!(assignmentExpressionSyntax.Left is MemberAccessExpressionSyntax memberAccessExpressionSyntax))
+            else if (assignmentExpressionSyntax.Left is MemberAccessExpressionSyntax memberAccessExpressionSyntax)
+            {
+                symbol = context.SemanticModel.GetSymbolInfo(memberAccessExpressionSyntax).Symbol;
+            }
+            else
                 return;
 
-            // Check if left Type is Item: item.b = 123
-            var memberAccessSymbolInfo = context.SemanticModel.GetSymbolInfo(memberAccessExpressionSyntax).Symbol;
-            if (memberAccessSymbolInfo == null || memberAccessSymbolInfo.ContainingType == null)
+            // Check if left Type exists: item.b = 123
+            if (symbol == null || symbol.ContainingType == null)
                 return;
 
-            if (!(memberAccessSymbolInfo is IFieldSymbol fieldSymbol))
+            if (!(symbol is IFieldSymbol fieldSymbol))
                 return;
 
-            string containingType = memberAccessSymbolInfo.ContainingType.ToString();
+            string containingType = symbol.ContainingType.ToString();
             //if (!containingType.Equals("Terraria.Item"))
             //     return;
 
@@ -289,11 +326,6 @@ namespace tModLoader.CodeAssist
             var FieldToIDTypeBinding = FieldToIDTypeBindings.FirstOrDefault(x => x.fullyQualifiedClassName == containingType && x.field == fieldName);
             if (FieldToIDTypeBinding == null)
                 return;
-
-            //var test = FieldToIDTypeBindings.FirstOrDefault(x => x.field == fieldName);
-            // Check if field is shoot: item.shoot = 123
-            // if (!fieldName.Equals("shoot"))
-            //    return;
 
             int rightValue = (int)right.Token.Value;
 
