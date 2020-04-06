@@ -12,11 +12,13 @@ jobs:
         
       # Runs a single command using the runners shell
       - name: Print a greeting
-        run: echo If you see this, it is working.
+        run: |
+          echo If you see this, it is working.
+          pwd
         
       # Build
       - name: Build
-        run: dotnet build tModLoader.CodeAssist\tModLoader.CodeAssist.csproj --configuration Release
+        run: dotnet build tModLoader.CodeAssist/tModLoader.CodeAssist.csproj --configuration Release
         
       # Publish
       - name: publish on version change
