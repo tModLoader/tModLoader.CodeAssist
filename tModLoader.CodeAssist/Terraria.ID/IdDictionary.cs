@@ -82,7 +82,8 @@ namespace tModLoader.CodeAssist.Terraria.ID
 				 int num = Convert.ToInt32(field.GetValue(null));
 				 if (num < dictionary.Count)
 				 {
-					 dictionary._nameToId.Add(field.Name, num);
+					 if(!dictionary._nameToId.ContainsValue(num))
+						dictionary._nameToId.Add(field.Name, num);
 				 }
 			 });
 			dictionary._idToName = dictionary._nameToId.ToDictionary((KeyValuePair<string, int> kp) => kp.Value, (KeyValuePair<string, int> kp) => kp.Key);

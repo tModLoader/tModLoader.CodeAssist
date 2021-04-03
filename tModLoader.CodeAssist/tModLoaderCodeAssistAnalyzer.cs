@@ -43,6 +43,8 @@ namespace tModLoader.CodeAssist
             FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.NPC", "type", "NPCID", NPCID.Search));
             FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Main", "netMode", "NetmodeID", IdDictionary.Create(typeof(NetmodeID), typeof(int))));
             FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.ModLoader.ModTile", "soundType", "SoundID", soundIDIDDictionary));
+            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.ModLoader.ModTile", "dustType", "DustID", DustID.Search));
+            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.ModLoader.ModWall", "dustType", "DustID", DustID.Search));
 
             // Could check parameter name, or check parameter list and index. 
             MethodParameterToIDTypeBindings = new List<MethodParameterToIDTypeBinding>();
@@ -56,7 +58,9 @@ namespace tModLoader.CodeAssist
             MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectile", "Terraria.Projectile.NewProjectile(Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Vector2, int, int, float, int, float, float)", new string[] { "Vector2", "Vector2", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 2, "ProjectileID", ProjectileID.Search));
             MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectile", "Terraria.Projectile.NewProjectile(float, float, float, float, int, int, float, int, float, float)", new string[] { "Single", "Single", "Single", "Single", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 4, "ProjectileID", ProjectileID.Search));
             MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectileDirect", "Terraria.Projectile.NewProjectileDirect(Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Vector2, int, int, float, int, float, float)", new string[] { "Vector2", "Vector2", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 2, "ProjectileID", ProjectileID.Search));
-
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Dust.NewDust", "Terraria.Dust.NewDust(Microsoft.Xna.Framework.Vector2, int, int, int, float, float, int, Microsoft.Xna.Framework.Color, float)", new string[] { "Vector2", "Int32", "Int32", "Int32", "Single", "Single", "Int32", "Color", "Single" }, 3, "DustID", DustID.Search));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Dust.NewDustDirect", "Terraria.Dust.NewDustDirect(Microsoft.Xna.Framework.Vector2, int, int, int, float, float, int, Microsoft.Xna.Framework.Color, float)", new string[] { "Vector2", "Int32", "Int32", "Int32", "Single", "Single", "Int32", "Color", "Single" }, 3, "DustID", DustID.Search));
+            //MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Dust.NewDustPerfect", "Terraria.Dust.NewDustPerfect(Microsoft.Xna.Framework.Vector2, int, Microsoft.Xna.Framework.Vector2?, int, Microsoft.Xna.Framework.Color, float)", new string[] { "Vector2", "Int32", "Vector2?", "Int32", "Color", "Single" }, 1, "DustID", DustID.Search));
 
             // Main.rand.Next(x) == 0 => Main.rand.NextBool(x)
 

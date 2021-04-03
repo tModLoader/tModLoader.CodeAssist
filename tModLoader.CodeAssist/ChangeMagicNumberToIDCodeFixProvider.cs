@@ -50,13 +50,13 @@ namespace tModLoader.CodeAssist
             context.RegisterCodeFix(
                 CodeAction.Create(
                     title: customTitle,
-                    createChangedDocument: c => ChangeMagicNumberToItemIDAsync(context, context.Document, diagnostic, root),
+                    createChangedDocument: c => ChangeMagicNumberToIDAsync(context, context.Document, diagnostic, root),
                     equivalenceKey: title),
                 diagnostic);
         }
 
 
-        Task<Document> ChangeMagicNumberToItemIDAsync(CodeFixContext context, Document document, Diagnostic diagnostic, SyntaxNode root)
+        Task<Document> ChangeMagicNumberToIDAsync(CodeFixContext context, Document document, Diagnostic diagnostic, SyntaxNode root)
         {
             var n = root.FindNode(diagnostic.Location.SourceSpan);
 
