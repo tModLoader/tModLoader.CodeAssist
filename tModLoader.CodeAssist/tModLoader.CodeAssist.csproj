@@ -8,7 +8,7 @@
 
   <PropertyGroup>
     <PackageId>tModLoader.CodeAssist</PackageId>
-    <Version>0.1.2</Version>
+    <Version>0.1.3</Version>
     <Authors>JavidPack</Authors>
     <!--<PackageLicenseUrl>http://LICENSE_URL_HERE_OR_DELETE_THIS_LINE</PackageLicenseUrl>-->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
