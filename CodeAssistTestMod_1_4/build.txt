@@ -1,0 +1,3 @@
+displayName = Code Assist Test Mod 1.4
+author = Javid Pack
+version = 0.1

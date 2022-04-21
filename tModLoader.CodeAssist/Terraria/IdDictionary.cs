@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace tModLoader.CodeAssist.Terraria.ID
+namespace tModLoader.CodeAssist.Terraria
 {
 	public class IdDictionary
 	{

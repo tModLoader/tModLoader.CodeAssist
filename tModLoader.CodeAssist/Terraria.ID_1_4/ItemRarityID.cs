@@ -1,11 +1,13 @@
-﻿namespace tModLoader.CodeAssist.Terraria.ID
+﻿namespace tModLoader.CodeAssist.Terraria.ID_1_4
 {
 	/// <summary>Enumerates the values used with Item.rare</summary>
 	public static class ItemRarityID
 	{
-		/// <summary>Minus twelve (-12)\nExpert: Rainbow\nFlag: item.expert</summary>
+		/// <summary>Minus thirteen (-13)<br/>Master: Fiery Red<br/>Flag: item.master</summary>
+		public const int Master = -13;
+		/// <summary>Minus twelve (-12)<br/>Expert: Rainbow<br/>Flag: item.expert</summary>
 		public const int Expert = -12;
-		/// <summary>Minus eleven (-11)\nQuest: Amber\nFlag: item.quest</summary>
+		/// <summary>Minus eleven (-11)<br/>Quest: Amber<br/>Flag: item.quest</summary>
 		public const int Quest = -11;
 		/// <summary>Minus one (-1)</summary>
 		public const int Gray = -1;
@@ -33,5 +35,7 @@
 		public const int Red = 10;
 		/// <summary>Eleven (11)</summary>
 		public const int Purple = 11;
+		public const int Count = 12;
+		public static readonly IdDictionary Search = IdDictionary.Create(typeof(ItemRarityID), typeof(int));
 	}
 }

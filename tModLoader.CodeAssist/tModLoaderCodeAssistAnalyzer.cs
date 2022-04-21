@@ -2,18 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
-using tModLoader.CodeAssist.Terraria.ID;
+using tModLoader.CodeAssist.Terraria;
 
 namespace tModLoader.CodeAssist
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class tModLoaderCodeAssistAnalyzer : DiagnosticAnalyzer
     {
+        public tModLoaderVersion tModLoaderVersion = tModLoaderVersion.Unknown;
+
         public const string ChangeMagicNumberToIDDiagnosticId = "ChangeMagicNumberToID";
 
         // You can change these strings in the Resources.resx file. If you do not want your analyzer to be localize-able, you can use regular strings for Title and MessageFormat.
@@ -25,46 +26,83 @@ namespace tModLoader.CodeAssist
 
         private static DiagnosticDescriptor ChangeMagicNumberToIDRule = new DiagnosticDescriptor(ChangeMagicNumberToIDDiagnosticId, ChangeMagicNumberToIDTitle, ChangeMagicNumberToIDMessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: ChangeMagicNumberToIDDescription);
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get { return ImmutableArray.Create(ChangeMagicNumberToIDRule); } }
+        public const string SimplifyUnifiedRandomDiagnosticId = "SimplifyUnifiedRandom";
+        private const string SimplifyUnifiedRandomTitle = "Simplify common Main.rand.Next usage patterns";
+        private const string SimplifyUnifiedRandomMessageFormat = "The expression \"{0}\" should be changed to \"{1}\" for readability";
+        private const string SimplifyUnifiedRandomDescription = "Simplifies common Main.rand.Next usage patterns";
+        private const string SimplifyUnifiedRandomCategory = "UnifiedRandom";
+        private static DiagnosticDescriptor SimplifyUnifiedRandomRule = new DiagnosticDescriptor(SimplifyUnifiedRandomDiagnosticId, SimplifyUnifiedRandomTitle, SimplifyUnifiedRandomMessageFormat, SimplifyUnifiedRandomCategory, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: SimplifyUnifiedRandomDescription);
+
+        // TODO: detect npc.ai[4+]
+
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get { return ImmutableArray.Create(ChangeMagicNumberToIDRule, SimplifyUnifiedRandomRule); } }
 
         public override void Initialize(AnalysisContext context)
         {
             // TODO: Consider registering other actions that act on syntax instead of or in addition to symbols
             // See https://github.com/dotnet/roslyn/blob/master/docs/analyzers/Analyzer%20Actions%20Semantics.md for more information
 
-            IdDictionary soundIDIDDictionary = IdDictionary.Create(typeof(SoundID), typeof(int));
-
             FieldToIDTypeBindings = new List<FieldToIDTypeBinding>();
-            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Item", "createTile", "TileID", TileID.Search));
-            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Item", "type", "ItemID", ItemID.Search));
-            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Item", "shoot", "ProjectileID", ProjectileID.Search));
-            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Item", "useStyle", "ItemUseStyleID", IdDictionary.Create(typeof(ItemUseStyleID), typeof(int))));
-            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Item", "rare", "ItemRarityID", IdDictionary.Create(typeof(ItemRarityID), typeof(int))));
-            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.NPC", "type", "NPCID", NPCID.Search));
-            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Main", "netMode", "NetmodeID", IdDictionary.Create(typeof(NetmodeID), typeof(int))));
-            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.ModLoader.ModTile", "soundType", "SoundID", soundIDIDDictionary));
-            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.ModLoader.ModTile", "dustType", "DustID", DustID.Search));
-            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.ModLoader.ModWall", "dustType", "DustID", DustID.Search));
+            SameFieldSeparateSearch("Terraria.Item", "createTile", "TileID", Terraria.ID_1_3.TileID.Search, Terraria.ID_1_4.TileID.Search);
+            SameFieldSeparateSearch("Terraria.Item", "type", "ItemID", Terraria.ID_1_3.ItemID.Search, Terraria.ID_1_4.ItemID.Search);
+            SameFieldSeparateSearch("Terraria.Item", "shoot", "ProjectileID", Terraria.ID_1_3.ProjectileID.Search, Terraria.ID_1_4.ProjectileID.Search);
+            SameFieldSeparateSearch("Terraria.Item", "useStyle", "ItemUseStyleID", IdDictionary.Create(typeof(Terraria.ID_1_3.ItemUseStyleID), typeof(int)), IdDictionary.Create(typeof(Terraria.ID_1_4.ItemUseStyleID), typeof(int)));
+            SameFieldSeparateSearch("Terraria.Item", "rare", "ItemRarityID", IdDictionary.Create(typeof(Terraria.ID_1_3.ItemRarityID), typeof(int)), IdDictionary.Create(typeof(Terraria.ID_1_4.ItemRarityID), typeof(int)));
+            SameFieldSeparateSearch("Terraria.NPC", "type", "NPCID", Terraria.ID_1_3.NPCID.Search, Terraria.ID_1_4.NPCID.Search);
+            FieldToIDTypeBindings.Add(new FieldToIDTypeBinding("Terraria.Main", "netMode", "NetmodeID", IdDictionary.Create(typeof(Terraria.ID.NetmodeID), typeof(int))));
+            SeparateFieldSeparateSearch("Terraria.ModLoader.ModTile", "soundType", "SoundType", "SoundID", Terraria.ID_1_3.SoundID.Search, Terraria.ID_1_4.SoundID.Search);
+            SeparateFieldSeparateSearch("Terraria.ModLoader.ModTile", "dustType", "DustType", "DustID", Terraria.ID_1_3.DustID.Search, Terraria.ID_1_4.DustID.Search);
+            SeparateFieldSeparateSearch("Terraria.ModLoader.ModWall", "dustType", "DustType", "DustID", Terraria.ID_1_3.DustID.Search, Terraria.ID_1_4.DustID.Search);
+
+            // Helper methods for handling slight 1.4 and 1.3 differences
+            void SameFieldSeparateSearch(string fullName, string field, string idType, IdDictionary idDictionary, IdDictionary idDictionary_1_4)
+            {
+                FieldToIDTypeBindings.Add(new FieldToIDTypeBinding(fullName, field, idType, idDictionary, tModLoaderVersion.tModLoader_1_3));
+                FieldToIDTypeBindings.Add(new FieldToIDTypeBinding(fullName, field, idType, idDictionary_1_4, tModLoaderVersion.tModLoader_1_4));
+            }
+            void SeparateFieldSeparateSearch(string fullName, string field, string field_1_4, string idType, IdDictionary idDictionary, IdDictionary idDictionary_1_4)
+            {
+                FieldToIDTypeBindings.Add(new FieldToIDTypeBinding(fullName, field, idType, idDictionary, tModLoaderVersion.tModLoader_1_3));
+                FieldToIDTypeBindings.Add(new FieldToIDTypeBinding(fullName, field_1_4, idType, idDictionary_1_4, tModLoaderVersion.tModLoader_1_4));
+            }
 
             // Could check parameter name, or check parameter list and index. 
             MethodParameterToIDTypeBindings = new List<MethodParameterToIDTypeBinding>();
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Item.CloneDefaults", "Terraria.Item.CloneDefaults(int)", new string[] { "Int32" }, 0, "ItemID", ItemID.Search));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.ModLoader.ModRecipe.AddTile", "Terraria.ModLoader.ModRecipe.AddTile(int)", new string[] { "Int32" }, 0, "TileID", TileID.Search));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.ModLoader.ModRecipe.AddIngredient", "Terraria.ModLoader.ModRecipe.AddIngredient(int, int)", new string[] { "Int32", "Int32" }, 0, "ItemID", ItemID.Search));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.ModLoader.ModRecipe.SetResult", "Terraria.ModLoader.ModRecipe.SetResult(int, int)", new string[] { "Int32", "Int32" }, 0, "ItemID", ItemID.Search));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.NetMessage.SendData", "Terraria.NetMessage.SendData(int, int, int, Terraria.Localization.NetworkText, int, float, float, float, int, int, int)", new string[] { "Int32", "Int32", "Int32", "NetworkText", "Int32", "Single", "Single", "Single", "Int32", "Int32", "Int32" }, 0, "MessageID", IdDictionary.Create(typeof(MessageID), typeof(byte))));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Main.PlaySound", "Terraria.Main.PlaySound(int, Microsoft.Xna.Framework.Vector2, int)", new string[] { "Int32", "Vector2", "Int32" }, 0, "SoundID", soundIDIDDictionary));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Main.PlaySound", "Terraria.Main.PlaySound(int, int, int, int, float, float)", new string[] { "Int32", "Int32", "Int32", "Int32", "Single", "Single" }, 0, "SoundID", soundIDIDDictionary));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectile", "Terraria.Projectile.NewProjectile(Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Vector2, int, int, float, int, float, float)", new string[] { "Vector2", "Vector2", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 2, "ProjectileID", ProjectileID.Search));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectile", "Terraria.Projectile.NewProjectile(float, float, float, float, int, int, float, int, float, float)", new string[] { "Single", "Single", "Single", "Single", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 4, "ProjectileID", ProjectileID.Search));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectileDirect", "Terraria.Projectile.NewProjectileDirect(Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Vector2, int, int, float, int, float, float)", new string[] { "Vector2", "Vector2", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 2, "ProjectileID", ProjectileID.Search));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Dust.NewDust", "Terraria.Dust.NewDust(Microsoft.Xna.Framework.Vector2, int, int, int, float, float, int, Microsoft.Xna.Framework.Color, float)", new string[] { "Vector2", "Int32", "Int32", "Int32", "Single", "Single", "Int32", "Color", "Single" }, 3, "DustID", DustID.Search));
-            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Dust.NewDustDirect", "Terraria.Dust.NewDustDirect(Microsoft.Xna.Framework.Vector2, int, int, int, float, float, int, Microsoft.Xna.Framework.Color, float)", new string[] { "Vector2", "Int32", "Int32", "Int32", "Single", "Single", "Int32", "Color", "Single" }, 3, "DustID", DustID.Search));
+            SameMethodSeparateSearch("Terraria.Item.CloneDefaults", "Terraria.Item.CloneDefaults(int)", new string[] { "Int32" }, 0, "ItemID", Terraria.ID_1_3.ItemID.Search, Terraria.ID_1_4.ItemID.Search);
+            SameMethodSeparateSearch("Terraria.NetMessage.SendData", "Terraria.NetMessage.SendData(int, int, int, Terraria.Localization.NetworkText, int, float, float, float, int, int, int)", new string[] { "Int32", "Int32", "Int32", "NetworkText", "Int32", "Single", "Single", "Single", "Int32", "Int32", "Int32" }, 0, "MessageID", IdDictionary.Create(typeof(Terraria.ID_1_3.MessageID), typeof(byte)), IdDictionary.Create(typeof(Terraria.ID_1_4.MessageID), typeof(byte)));
+            SameMethodSeparateSearch("Terraria.Dust.NewDust", "Terraria.Dust.NewDust(Microsoft.Xna.Framework.Vector2, int, int, int, float, float, int, Microsoft.Xna.Framework.Color, float)", new string[] { "Vector2", "Int32", "Int32", "Int32", "Single", "Single", "Int32", "Color", "Single" }, 3, "DustID", Terraria.ID_1_3.DustID.Search, Terraria.ID_1_4.DustID.Search);
+            SameMethodSeparateSearch("Terraria.Dust.NewDustDirect", "Terraria.Dust.NewDustDirect(Microsoft.Xna.Framework.Vector2, int, int, int, float, float, int, Microsoft.Xna.Framework.Color, float)", new string[] { "Vector2", "Int32", "Int32", "Int32", "Single", "Single", "Int32", "Color", "Single" }, 3, "DustID", Terraria.ID_1_3.DustID.Search, Terraria.ID_1_4.DustID.Search);
+
+            // 1.3 only
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.ModLoader.ModRecipe.AddTile", "Terraria.ModLoader.ModRecipe.AddTile(int)", new string[] { "Int32" }, 0, "TileID", Terraria.ID_1_3.TileID.Search, tModLoaderVersion.tModLoader_1_3));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.ModLoader.ModRecipe.AddIngredient", "Terraria.ModLoader.ModRecipe.AddIngredient(int, int)", new string[] { "Int32", "Int32" }, 0, "ItemID", Terraria.ID_1_3.ItemID.Search, tModLoaderVersion.tModLoader_1_3));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.ModLoader.ModRecipe.SetResult", "Terraria.ModLoader.ModRecipe.SetResult(int, int)", new string[] { "Int32", "Int32" }, 0, "ItemID", Terraria.ID_1_3.ItemID.Search, tModLoaderVersion.tModLoader_1_3));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Main.PlaySound", "Terraria.Main.PlaySound(int, Microsoft.Xna.Framework.Vector2, int)", new string[] { "Int32", "Vector2", "Int32" }, 0, "SoundID", Terraria.ID_1_3.SoundID.Search, tModLoaderVersion.tModLoader_1_3));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Main.PlaySound", "Terraria.Main.PlaySound(int, int, int, int, float, float)", new string[] { "Int32", "Int32", "Int32", "Int32", "Single", "Single" }, 0, "SoundID", Terraria.ID_1_3.SoundID.Search, tModLoaderVersion.tModLoader_1_3));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectile", "Terraria.Projectile.NewProjectile(Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Vector2, int, int, float, int, float, float)", new string[] { "Vector2", "Vector2", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 2, "ProjectileID", Terraria.ID_1_3.ProjectileID.Search, tModLoaderVersion.tModLoader_1_3));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectile", "Terraria.Projectile.NewProjectile(float, float, float, float, int, int, float, int, float, float)", new string[] { "Single", "Single", "Single", "Single", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 4, "ProjectileID", Terraria.ID_1_3.ProjectileID.Search, tModLoaderVersion.tModLoader_1_3));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectileDirect", "Terraria.Projectile.NewProjectileDirect(Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Vector2, int, int, float, int, float, float)", new string[] { "Vector2", "Vector2", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 2, "ProjectileID", Terraria.ID_1_3.ProjectileID.Search, tModLoaderVersion.tModLoader_1_3));
             //MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Dust.NewDustPerfect", "Terraria.Dust.NewDustPerfect(Microsoft.Xna.Framework.Vector2, int, Microsoft.Xna.Framework.Vector2?, int, Microsoft.Xna.Framework.Color, float)", new string[] { "Vector2", "Int32", "Vector2?", "Int32", "Color", "Single" }, 1, "DustID", DustID.Search));
+
+            // 1.4 only
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Recipe.AddTile", "Terraria.Recipe.AddTile(int)", new string[] { "Int32" }, 0, "TileID", Terraria.ID_1_4.TileID.Search, tModLoaderVersion.tModLoader_1_4));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Recipe.AddIngredient", "Terraria.Recipe.AddIngredient(int, int)", new string[] { "Int32", "Int32" }, 0, "ItemID", Terraria.ID_1_4.ItemID.Search, tModLoaderVersion.tModLoader_1_4));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.ModLoader.Mod.CreateRecipe", "Terraria.ModLoader.Mod.CreateRecipe(int, int)", new string[] { "Int32", "Int32" }, 0, "ItemID", Terraria.ID_1_4.ItemID.Search, tModLoaderVersion.tModLoader_1_4));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Audio.SoundEngine.PlaySound", "Terraria.Audio.SoundEngine.PlaySound(int, Microsoft.Xna.Framework.Vector2, int)", new string[] { "Int32", "Vector2", "Int32" }, 0, "SoundID", Terraria.ID_1_4.SoundID.Search, tModLoaderVersion.tModLoader_1_4));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Audio.SoundEngine.PlaySound", "Terraria.Audio.SoundEngine.PlaySound(int, int, int, int, float, float)", new string[] { "Int32", "Int32", "Int32", "Int32", "Single", "Single" }, 0, "SoundID", Terraria.ID_1_4.SoundID.Search, tModLoaderVersion.tModLoader_1_4));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectile", "Terraria.Projectile.NewProjectile(Terraria.DataStructures.IEntitySource, Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Vector2, int, int, float, int, float, float)", new string[] { "IEntitySource", "Vector2", "Vector2", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 3, "ProjectileID", Terraria.ID_1_4.ProjectileID.Search, tModLoaderVersion.tModLoader_1_4));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectile", "Terraria.Projectile.NewProjectile(Terraria.DataStructures.IEntitySource, float, float, float, float, int, int, float, int, float, float)", new string[] { "IEntitySource", "Single", "Single", "Single", "Single", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 5, "ProjectileID", Terraria.ID_1_4.ProjectileID.Search, tModLoaderVersion.tModLoader_1_4));
+            MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding("Terraria.Projectile.NewProjectileDirect", "Terraria.Projectile.NewProjectileDirect(Terraria.DataStructures.IEntitySource, Microsoft.Xna.Framework.Vector2, Microsoft.Xna.Framework.Vector2, int, int, float, int, float, float)", new string[] { "IEntitySource", "Vector2", "Vector2", "Int32", "Int32", "Single", "Int32", "Single", "Single" }, 3, "ProjectileID", Terraria.ID_1_4.ProjectileID.Search, tModLoaderVersion.tModLoader_1_4));
+
+            void SameMethodSeparateSearch(string fullyQualifiedMethodName, string fullMethodWithParameters, string[] parameterNames, int parameterIndex, string idType, IdDictionary idDictionary, IdDictionary idDictionary_1_4)
+            {
+                MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding(fullyQualifiedMethodName, fullMethodWithParameters, parameterNames, parameterIndex, idType, idDictionary, tModLoaderVersion.tModLoader_1_3));
+                MethodParameterToIDTypeBindings.Add(new MethodParameterToIDTypeBinding(fullyQualifiedMethodName, fullMethodWithParameters, parameterNames, parameterIndex, idType, idDictionary_1_4, tModLoaderVersion.tModLoader_1_4));
+            }
 
             // Main.rand.Next(x) == 0 => Main.rand.NextBool(x)
 
-            //modTile.drop, modTile.soundType, modTile.dustType
+            // modTile.drop, modTile.dustType
             // using static ModContent
             // Detect bad AddTile AddIngredient
             // Main.player[Main.myPlayer] => Main.LocalPlayer
@@ -73,6 +111,8 @@ namespace tModLoader.CodeAssist
             context.EnableConcurrentExecution();
 
             context.RegisterSyntaxNodeAction(AnalyzeMagicNumberAssignmentExpressions, SyntaxKind.SimpleAssignmentExpression);
+
+            context.RegisterSyntaxNodeAction(AnalyzeRandNextEqualsExpressions, SyntaxKind.EqualsExpression);
 
             context.RegisterSyntaxNodeAction(AnalyzeMagicNumberEqualsExpressions, SyntaxKind.EqualsExpression,
                                                                                     SyntaxKind.NotEqualsExpression,
@@ -83,7 +123,12 @@ namespace tModLoader.CodeAssist
 
             context.RegisterSyntaxNodeAction(AnalyzeMagicNumberInvocationExpressions, SyntaxKind.InvocationExpression);
 
-           // context.RegisterSyntaxNodeAction(AnalyzeIncorrectParameterInvocationExpressions, SyntaxKind.InvocationExpression);
+            // context.RegisterSyntaxNodeAction(AnalyzeIncorrectParameterInvocationExpressions, SyntaxKind.InvocationExpression);
+
+            context.RegisterCompilationAction(AnalyzeCompilation);
+
+            context.RegisterCompilationStartAction(AnalyzeCompilationStart);
+
         }
 
         private List<FieldToIDTypeBinding> FieldToIDTypeBindings;
@@ -98,14 +143,16 @@ namespace tModLoader.CodeAssist
             //Type idType;
             internal string idType;
             internal IdDictionary idDictionary;
+            internal tModLoaderVersion appliesToVersion;
 
-            public FieldToIDTypeBinding(string fullName, string field, string idType, IdDictionary idDictionary)
+            public FieldToIDTypeBinding(string fullName, string field, string idType, IdDictionary idDictionary, tModLoaderVersion appliesToVersion = tModLoaderVersion.tModLoader_1_3_Or_1_4)
             {
                 this.fullyQualifiedClassName = fullName;
                 this.className = fullName.Substring(fullName.LastIndexOf(".") + 1);
                 this.field = field;
                 this.idType = idType;
                 this.idDictionary = idDictionary;
+                this.appliesToVersion = appliesToVersion;
                 //if (idType == "TileID")
                 //    idDictionary = TileID.Search;
                 //if (idType == "ItemID")
@@ -128,8 +175,9 @@ namespace tModLoader.CodeAssist
             internal int parameterIndex;
             internal string idType;
             internal IdDictionary idDictionary;
+            internal tModLoaderVersion appliesToVersion;
 
-            public MethodParameterToIDTypeBinding(string fullyQualifiedMethodName, string fullMethodWithParameters, string[] parameterNames, int parameterIndex, string idType, IdDictionary idDictionary)
+            public MethodParameterToIDTypeBinding(string fullyQualifiedMethodName, string fullMethodWithParameters, string[] parameterNames, int parameterIndex, string idType, IdDictionary idDictionary, tModLoaderVersion appliesToVersion = tModLoaderVersion.tModLoader_1_3_Or_1_4)
             {
                 this.fullyQualifiedMethodName = fullyQualifiedMethodName;
                 this.methodName = fullyQualifiedMethodName.Substring(fullyQualifiedMethodName.LastIndexOf(".") + 1);
@@ -138,6 +186,7 @@ namespace tModLoader.CodeAssist
                 this.parameterIndex = parameterIndex;
                 this.idType = idType;
                 this.idDictionary = idDictionary;
+                this.appliesToVersion = appliesToVersion;
             }
 
             public override string ToString()
@@ -163,7 +212,7 @@ namespace tModLoader.CodeAssist
 
             if (!(invocationExpressionSyntax.Expression is MemberAccessExpressionSyntax MemberAccessExpressionSyntax))
                 return;
-             
+
             string methodName = MemberAccessExpressionSyntax.Name.ToString();
             //if (MemberAccessExpressionSyntax?.Name.ToString() != "AddIngredient")
             //    return;
@@ -191,11 +240,11 @@ namespace tModLoader.CodeAssist
             var parameterTypeNames = memberSymbol.Parameters.Select(p => p.Type.Name);
 
             // Find exact MethodParameterToIDTypeBinding related to this InvocationExpressionSyntax
-            var methodParameterToIDTypeBinding = MethodParameterToIDTypeBindings.FirstOrDefault(x => x.fullMethodWithParameters == fullyQualifiedMethodName && x.parameterNames.SequenceEqual(parameterTypeNames));
+            var methodParameterToIDTypeBinding = MethodParameterToIDTypeBindings.FirstOrDefault(x => x.fullMethodWithParameters == fullyQualifiedMethodName && x.parameterNames.SequenceEqual(parameterTypeNames) && x.appliesToVersion.HasFlag(tModLoaderVersion));
             if (methodParameterToIDTypeBinding == null)
                 return;
 
-            if (argumentCount < methodParameterToIDTypeBinding.parameterIndex)
+            if (argumentCount < methodParameterToIDTypeBinding.parameterIndex) // IS this the bug? SetDefaults();
                 return;
 
             // Check if parameter at index is literal number: SetDefaults(111, 2)
@@ -234,6 +283,78 @@ namespace tModLoader.CodeAssist
 
         }
 
+        private void AnalyzeRandNextEqualsExpressions(SyntaxNodeAnalysisContext context)
+        {
+            var binaryExpressionSyntax = (BinaryExpressionSyntax)context.Node;
+
+            // Check if right side is literal number: a == 123
+            if (!(binaryExpressionSyntax.Right is LiteralExpressionSyntax right && right.IsKind(SyntaxKind.NumericLiteralExpression)))
+                return;
+
+            ISymbol symbol;
+            // Check if left is invoking a method: a.b() == 123
+            if (binaryExpressionSyntax.Left is InvocationExpressionSyntax invocationExpressionSyntax)
+            {
+                symbol = context.SemanticModel.GetSymbolInfo(invocationExpressionSyntax).Symbol;
+            }
+            else
+                return;
+
+            // Check if left Type exists: item.b = 123
+            if (symbol == null || symbol.ContainingType == null)
+                return;
+
+            if (!(symbol is IMethodSymbol methodSymbol))
+                return;
+
+            string containingType = symbol.ContainingType.ToString();
+
+            string methodName = methodSymbol.Name;
+            if (containingType != "Terraria.Utilities.UnifiedRandom" || methodName != "Next")
+                return;
+
+            if (methodSymbol.Parameters.Length != 1 || methodSymbol.Parameters[0].Type.Name != "Int32")
+                return;
+
+            var argumentListSyntax = invocationExpressionSyntax.ArgumentList;
+
+            if (!(argumentListSyntax.Arguments[0].Expression is LiteralExpressionSyntax parameter && parameter.IsKind(SyntaxKind.NumericLiteralExpression)))
+                return;
+
+            int parameterValue = (int)parameter.Token.Value;
+
+            //if (parameterValue != 0)
+            //    return;
+
+            string original = binaryExpressionSyntax.ToFullString();
+
+            string result = $"NextBool({parameterValue})";
+
+            var methodcall = invocationExpressionSyntax.Expression as MemberAccessExpressionSyntax;
+            Console.WriteLine();
+            var b = invocationExpressionSyntax.ReplaceNode(methodcall.Name, SyntaxFactory.IdentifierName("NextBool"));
+            b = b.WithoutTrailingTrivia();
+            //var c = binaryExpressionSyntax.remove(binaryExpressionSyntax.OperatorToken, SyntaxRemoveOptions.KeepExteriorTrivia);
+            //c = c.RemoveNode(binaryExpressionSyntax.);
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine();
+
+            result = b.ToFullString();
+
+            //invocationExpressionSyntax.ReplaceToken(invocationExpressionSyntax.Expression as MemberAccessException mem)
+
+            var builder = ImmutableDictionary.CreateBuilder<string, string>();
+            builder["result"] = result;
+            var properties = builder.ToImmutable();
+
+            // "The expression {0} should be changed to {1} for readability"
+            var diagnostic = Diagnostic.Create(SimplifyUnifiedRandomRule, binaryExpressionSyntax.GetLocation(), properties, original, result);
+            context.ReportDiagnostic(diagnostic);
+
+            Console.WriteLine();
+        }
+
         // assignment and equals can share code.
 
         private void AnalyzeMagicNumberEqualsExpressions(SyntaxNodeAnalysisContext context)
@@ -269,13 +390,13 @@ namespace tModLoader.CodeAssist
             string containingType = symbol.ContainingType.ToString();
 
             string fieldName = fieldSymbol.Name;
-            var FieldToIDTypeBinding = FieldToIDTypeBindings.FirstOrDefault(x => x.fullyQualifiedClassName == containingType && x.field == fieldName);
+            var FieldToIDTypeBinding = FieldToIDTypeBindings.FirstOrDefault(x => x.fullyQualifiedClassName == containingType && x.field == fieldName && x.appliesToVersion.HasFlag(tModLoaderVersion));
             if (FieldToIDTypeBinding == null)
                 return;
 
             int rightValue = (int)right.Token.Value;
 
-            if(FieldToIDTypeBinding.idDictionary.ContainsId(rightValue))
+            if (FieldToIDTypeBinding.idDictionary.ContainsId(rightValue))
             //if (rightValue > 0 && rightValue < FieldToIDTypeBinding.idDictionary.Count /* ItemID.Count*/)
             {
                 string result = $"{FieldToIDTypeBinding.idType}.{FieldToIDTypeBinding.idDictionary.GetName(rightValue)}";
@@ -327,7 +448,7 @@ namespace tModLoader.CodeAssist
             //     return;
 
             string fieldName = fieldSymbol.Name;
-            var FieldToIDTypeBinding = FieldToIDTypeBindings.FirstOrDefault(x => x.fullyQualifiedClassName == containingType && x.field == fieldName);
+            var FieldToIDTypeBinding = FieldToIDTypeBindings.FirstOrDefault(x => x.fullyQualifiedClassName == containingType && x.field == fieldName && x.appliesToVersion.HasFlag(tModLoaderVersion));
             if (FieldToIDTypeBinding == null)
                 return;
 
@@ -347,6 +468,51 @@ namespace tModLoader.CodeAssist
                 var diagnostic = Diagnostic.Create(ChangeMagicNumberToIDRule, right.GetLocation(), properties, rightValue, result);
                 context.ReportDiagnostic(diagnostic);
             }
+        }
+
+        private void AnalyzeCompilationStart(CompilationStartAnalysisContext context)
+        {
+            var compilation = context.Compilation;
+            bool tMod13 = compilation.References.Any(x => x.Display.EndsWith("tModLoader.exe"));
+            bool tMod14 = compilation.References.Any(x => x.Display.EndsWith("tModLoader.dll"));
+
+            if (tMod13)
+                tModLoaderVersion = tModLoaderVersion.tModLoader_1_3;
+            if (tMod14)
+                tModLoaderVersion = tModLoaderVersion.tModLoader_1_4;
+
+            Console.WriteLine("tModLoaderVersion is " + tModLoaderVersion);
+
+            //var tmodReference = compilation.References.FirstOrDefault(x => x.Display.EndsWith("tModLoader.exe"));
+
+            // TODO: can possibly check .png files if  <AdditionalFiles Include="**\*.png" /> added
+            //var b = context.Options.AdditionalFiles.Length;
+
+            //foreach (var item in context.Options.AdditionalFiles)
+            //{
+            //    var a = item.Path;
+            //    //context.Compilation.SourceModule.Locations.
+            //}
+        }
+
+        private void AnalyzeCompilation(CompilationAnalysisContext context)
+        {
+            var compilation = context.Compilation;
+            //int referenceCount = compilation.References.Count();
+
+            //var a = compilation.References.FirstOrDefault(x => x.Display.Contains("tModLoader.exe"));
+
+            //var b = compilation.References.FirstOrDefault(x => x.Display.Contains("tModLoader.dll"));
+
+            //if (referenceCount > 5)
+            //{
+            //    //context.ReportDiagnostic(
+            //    //    Diagnostic.Create(
+            //    //        TooManyReferences,
+            //    //        null,
+            //    //        compilation.AssemblyName,
+            //    //        referenceCount));
+            //}
         }
     }
 }

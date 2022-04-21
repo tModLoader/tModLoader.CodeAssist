@@ -1,4 +1,4 @@
-﻿namespace tModLoader.CodeAssist.Terraria.ID
+﻿namespace tModLoader.CodeAssist.Terraria.ID_1_3
 {
 	public class NPCID
 	{

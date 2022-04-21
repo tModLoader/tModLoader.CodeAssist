@@ -1,7 +1,7 @@
-﻿namespace tModLoader.CodeAssist.Terraria.ID
+﻿namespace tModLoader.CodeAssist.Terraria.ID_1_3
 {
-	/// <summary>Enumerates the values used with Item.useStyle</summary>
-	public static class ItemUseStyleID
+    /// <summary>Enumerates the values used with Item.useStyle</summary>
+    public static class ItemUseStyleID
 	{
 		/// <summary>One (1)\nSwinging and throwing\nUsed for many weapons, block placement etc.</summary>
 		public const int SwingThrow = 1;

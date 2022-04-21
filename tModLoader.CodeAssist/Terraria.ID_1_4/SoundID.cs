@@ -1,4 +1,4 @@
-﻿namespace tModLoader.CodeAssist.Terraria.ID
+﻿namespace tModLoader.CodeAssist.Terraria.ID_1_4
 {
 	public static class SoundID
 	{
@@ -45,5 +45,29 @@
 		public const int Camera = 40;
 		public const int MoonLord = 41;
 		public const int Trackable = 42;
+		public const int Thunder = 43;
+		public const int Seagull = 44;
+		public const int Dolphin = 45;
+		public const int Owl = 46;
+		public const int GuitarC = 47;
+		public const int GuitarD = 48;
+		public const int GuitarEm = 49;
+		public const int GuitarG = 50;
+		public const int GuitarAm = 51;
+		public const int GuitarF = 52;
+		public const int DrumHiHat = 53;
+		public const int DrumTomHigh = 54;
+		public const int DrumTomLow = 55;
+		public const int DrumTomMid = 56;
+		public const int DrumClosedHiHat = 57;
+		public const int DrumCymbal1 = 58;
+		public const int DrumCymbal2 = 59;
+		public const int DrumKick = 60;
+		public const int DrumTamaSnare = 61;
+		public const int DrumFloorTom = 62;
+		public const int Research = 63;
+		public const int ResearchComplete = 64;
+		public const int QueenSlime = 65;
+		public static readonly IdDictionary Search = IdDictionary.Create(typeof(SoundID), typeof(int));
 	}
 }

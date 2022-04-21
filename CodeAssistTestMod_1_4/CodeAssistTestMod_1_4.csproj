@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="C:\Program Files (x86)\Steam\steamapps\common\tModLoader\tMLMod.targets" />
+  <PropertyGroup>
+    <AssemblyName>CodeAssistTestMod_1_4</AssemblyName>
+    <TargetFramework>net6.0</TargetFramework>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+</Project>
