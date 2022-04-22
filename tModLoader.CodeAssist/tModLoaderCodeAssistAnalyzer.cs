@@ -112,7 +112,7 @@ namespace tModLoader.CodeAssist
 
             context.RegisterSyntaxNodeAction(AnalyzeMagicNumberAssignmentExpressions, SyntaxKind.SimpleAssignmentExpression);
 
-            context.RegisterSyntaxNodeAction(AnalyzeRandNextEqualsExpressions, SyntaxKind.EqualsExpression);
+            context.RegisterSyntaxNodeAction(AnalyzeRandNextEqualsExpressions, SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression);
 
             context.RegisterSyntaxNodeAction(AnalyzeMagicNumberEqualsExpressions, SyntaxKind.EqualsExpression,
                                                                                     SyntaxKind.NotEqualsExpression,
@@ -316,31 +316,34 @@ namespace tModLoader.CodeAssist
             if (methodSymbol.Parameters.Length != 1 || methodSymbol.Parameters[0].Type.Name != "Int32")
                 return;
 
-            var argumentListSyntax = invocationExpressionSyntax.ArgumentList;
+            //var argumentListSyntax = invocationExpressionSyntax.ArgumentList;
 
-            if (!(argumentListSyntax.Arguments[0].Expression is LiteralExpressionSyntax parameter && parameter.IsKind(SyntaxKind.NumericLiteralExpression)))
-                return;
+            //if (!(argumentListSyntax.Arguments[0].Expression is ExpressionSyntax argument))
+            //    return;
 
-            int parameterValue = (int)parameter.Token.Value;
+            //if (!(argumentListSyntax.Arguments[0].Expression is LiteralExpressionSyntax parameter && parameter.IsKind(SyntaxKind.NumericLiteralExpression)))
+            //    return;
+
+            //int parameterValue = (int)parameter.Token.Value;
 
             //if (parameterValue != 0)
             //    return;
 
             string original = binaryExpressionSyntax.ToFullString();
 
-            string result = $"NextBool({parameterValue})";
+            //string result = $"NextBool({argument.GetText()})";
+
+            bool not = binaryExpressionSyntax.Kind() == SyntaxKind.NotEqualsExpression;
 
             var methodcall = invocationExpressionSyntax.Expression as MemberAccessExpressionSyntax;
-            Console.WriteLine();
-            var b = invocationExpressionSyntax.ReplaceNode(methodcall.Name, SyntaxFactory.IdentifierName("NextBool"));
-            b = b.WithoutTrailingTrivia();
+            var nextBool = invocationExpressionSyntax.ReplaceNode(methodcall.Name, SyntaxFactory.IdentifierName("NextBool"));
+            nextBool = nextBool.WithoutTrailingTrivia();
+            var notNextBool = SyntaxFactory.PrefixUnaryExpression(SyntaxKind.LogicalNotExpression, nextBool);
+            
             //var c = binaryExpressionSyntax.remove(binaryExpressionSyntax.OperatorToken, SyntaxRemoveOptions.KeepExteriorTrivia);
             //c = c.RemoveNode(binaryExpressionSyntax.);
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
 
-            result = b.ToFullString();
+            string result = not ? notNextBool.ToFullString() : nextBool.ToFullString();
 
             //invocationExpressionSyntax.ReplaceToken(invocationExpressionSyntax.Expression as MemberAccessException mem)
 

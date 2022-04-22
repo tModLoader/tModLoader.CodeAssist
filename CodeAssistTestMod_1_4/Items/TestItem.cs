@@ -46,7 +46,10 @@ namespace CodeAssistTestMod_1_4.Items
 
             if (Main.rand.Next(5) == 6) { }
             if (Main.rand.Next(6) == 11) { }
-            var r = Main.rand; if (r.Next(5) == 10) { }
+            var r = Main.rand; if (r.Next(5 + 1) == 10) { }
+            bool a = false;
+            if (r.Next(a ? 1 : 4) == 34) { }
+            if (r.Next(a ? 1 : 6) != 22) { }
 
             return base.UseItem(player);
         }
